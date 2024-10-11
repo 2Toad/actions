@@ -56,11 +56,11 @@ inputs:
     required: true
     default: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   skip_dirs:
-    description: "A comma separated list of directories not to scan"
+    description: "A comma-separated list of directories not to scan"
     required: false
     default: ""
   skip_files:
-    description: "A comma separated list of files not to scan"
+    description: "A comma-separated list of files not to scan"
     required: false
     default: ""
   include_dev_dependencies:
@@ -75,7 +75,7 @@ runs:
       shell: bash
       run: |
         set +e
-        trivy fs --scanners vuln,misconfig,secret,license \
+        trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
           --severity ${{ inputs.severity }} \
           $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs '${{ inputs.skip_dirs }}'") \
           $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files '${{ inputs.skip_files }}'") \
@@ -83,11 +83,16 @@ runs:
           --ignore-unfixed \
           --no-progress \
           ${{ inputs.path }} \
-          --exit-code 1 | tee trivy_output.txt
-        exit_code=${PIPESTATUS[0]}
+          --exit-code 1 2>&1)
+        exit_code=$?
         set -e
+
+        # Print the Trivy output to the console
+        echo "$trivy_output"
+
+        # Check the exit code and handle the specific error
         if [ $exit_code -ne 0 ]; then
-          if grep -q 'failed to download vulnerability DB' trivy_output.txt; then
+          if echo "$trivy_output" | grep -q -i 'failed to download vulnerability DB'; then
             echo "WARNING: Trivy failed to download vulnerability DB, so it was unable to scan for vulnerabilities."
             exit 0
           else
