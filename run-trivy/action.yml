@@ -1,0 +1,96 @@
+# -----------------------------------------------------------------------------
+# Run Trivy SCA Scan
+#
+# Description:
+#   This GitHub Action runs a Trivy Software Composition Analysis (SCA) scan on
+#   the specified path in the repository. It uses Trivy to scan for vulnerabilities,
+#   misconfigurations, secrets, and license issues in the codebase. This action
+#   is designed to be flexible, allowing for the inclusion or exclusion of development
+#   dependencies and specific directories or files from the scan.
+#
+# Inputs:
+#   - path (required): The path to scan. Default is ".".
+#   - severity (required): The severity levels to report.
+#     Defaults to all possible values "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL".
+#   - skip_dirs (optional): A comma-separated list of directories not to scan.
+#   - skip_files (optional): A comma-separated list of files not to scan.
+#   - include_dev_dependencies (optional): A boolean value to determine whether
+#     development dependencies should be included in the scan. Default is "true".
+#
+# Requirements
+#   - Trivy must be installed (e.g., 2Toad/actions/install-trivy)
+#   - Code must be checked-out
+#   - For license scanning to work, node_modules folder must be present
+#
+# Usage Example:
+#   jobs:
+#     sca:
+#       runs-on: ubuntu-latest
+#       steps:
+#         - name: Checkout code
+#           uses: actions/checkout@v4
+#
+#         - name: Install Trivy
+#           uses: 2Toad/actions/install-trivy@v1
+#   
+#         - name: Run Trivy SCA Scan
+#           uses: 2Toad/actions/run-trivy@v1
+#           with:
+#             path: "./src"
+#             severity: "MEDIUM,HIGH,CRITICAL"
+#             skip_dirs: "node_modules,dist"
+#             skip_files: "Dockerfile"
+#             include_dev_dependencies: "false"
+#
+# -----------------------------------------------------------------------------
+
+name: "Run Trivy SCA Scan"
+description: "Run Trivy Software Composition Analysis scan on the repository"
+inputs:
+  path:
+    description: "The path to scan"
+    required: true
+    default: "."
+  severity:
+    description: "Severity levels to report (e.g., HIGH,CRITICAL)"
+    required: true
+    default: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+  skip_dirs:
+    description: "A comma separated list of directories not to scan"
+    required: false
+    default: ""
+  skip_files:
+    description: "A comma separated list of files not to scan"
+    required: false
+    default: ""
+  include_dev_dependencies:
+    description: "Whether to include development dependencies in the scan"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Trivy SCA scan
+      shell: bash
+      run: |
+        set +e
+        trivy fs --scanners vuln,misconfig,secret,license \
+          --severity ${{ inputs.severity }} \
+          $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs '${{ inputs.skip_dirs }}'") \
+          $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files '${{ inputs.skip_files }}'") \
+          $([ "${{ inputs.include_dev_dependencies }}" = "true" ] && echo "--include-dev-deps") \
+          --ignore-unfixed \
+          --no-progress \
+          ${{ inputs.path }} \
+          --exit-code 1 | tee trivy_output.txt
+        exit_code=${PIPESTATUS[0]}
+        set -e
+        if [ $exit_code -ne 0 ]; then
+          if grep -q 'failed to download vulnerability DB' trivy_output.txt; then
+            echo "WARNING: Trivy failed to download vulnerability DB, so it was unable to scan for vulnerabilities."
+            exit 0
+          else
+            exit $exit_code
+          fi
+        fi
