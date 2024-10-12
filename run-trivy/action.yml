@@ -81,8 +81,8 @@ runs:
         set +e
         trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
           --severity ${{ inputs.severity }} \
-          $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs '${{ inputs.skip_dirs }}'") \
-          $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files '${{ inputs.skip_files }}'") \
+          $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs ${{ inputs.skip_dirs }}") \
+          $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files ${{ inputs.skip_files }}") \
           $([ "${{ inputs.include_dev_dependencies }}" = "true" ] && echo "--include-dev-deps") \
           --ignore-unfixed \
           --no-progress \
