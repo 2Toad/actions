@@ -1,0 +1,38 @@
+name: "Deploy to Prod"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g., 1.1.0)"
+        required: true
+
+env:
+  RELEASE_VERSION: v${{ github.event.inputs.version }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          owner: 2Toad
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.RELEASE_VERSION }}
+          commit: main
+          generateReleaseNotes: true
+
+      - name: Update major version tag
+        run: |
+          git fetch --tags
+          git config user.name "${{ github.actor }}"
+          git config user.email "github-actions@github.com"
+          MAJOR_VERSION=v$(echo ${{ github.event.inputs.version }} | cut -d. -f1)
+          git tag -fa $MAJOR_VERSION -m "Update $MAJOR_VERSION tag to ${{ env.RELEASE_VERSION }}" ${{ env.RELEASE_VERSION }}
+          git push origin $MAJOR_VERSION --force

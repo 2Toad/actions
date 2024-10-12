@@ -15,30 +15,13 @@ Thank you for wanting to contribute to this project. With your help we can ensur
 
 ## Deployment
 
-### 1. Publish New Release
+1. Navigate to the [Actions tab](https://github.com/2Toad/actions/actions)
+2. Select the "Deploy to Prod" workflow
+3. Click "Run workflow".
+4. Enter a version number using semantic versioning (e.g., `1.1.0`).
+5. Click "Run workflow" to start the process.
 
-1. Navigate to [actions's releases](https://github.com/2Toad/actions/releases).
-2. Click "Draft a new release":
-   - **Choose a tag**: enter version (e.g., `v1.1.0`) and click "Create new tag"
-   - **Target**: `main`
-   - **Previous tag**: `auto`
-   - **Release title**: (e.g., `1.1.0`)
-   - **Description**: click the "Generate release notes"
-   - [x] **Set as the latest release**
-3. Click "Publish release".
-
-2. ### Update Major Version Tag
-
-After publishing a new release, update the major version tag using the following CLI commands:
-
-1. Ensure you're on the main branch and have the latest changes:
-   ```bash
-   git checkout main
-   git pull origin main
-   ```
-2. Update the major version tag:
-   ```bash
-   git tag -fa v1 -m "Update v1 tag to latest release" v1.1.0
-   git push origin v1 --force
-   ```
-   Replace `v1` with the appropriate major version (e.g., v2) and `v1.1.0` with the newest release (e.g., v2.0.3).
+This automated workflow will:
+- Create a new release with the specified version number
+- Generate release notes
+- Update the corresponding major version tag (e.g. `v1` will point to v1.x)
