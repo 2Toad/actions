@@ -37,7 +37,8 @@ This [GitHub Action](./run-trivy/action.yml) runs a Trivy SCA scan on the specif
 - `severity` (required): The severity levels to report. Defaults to all possible values `UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL`.
 - `skip_dirs` (optional): A comma-separated list of directories not to scan.
 - `skip_files` (optional): A comma-separated list of files not to scan.
-- `include_dev_dependencies` (optional): A boolean value to determine whether development dependencies should be included in the scan. Default is "true".
+- `include_dev_dependencies` (optional): When `true` development dependencies are included in the scan. Default is "true".
+- `fail_on_db_error` (optional): When `true` the action will fail if Trivy cannot download the vulnerability DB (and perform the vulnerability scan). Default is "true".
 
 **Requirements:**
 

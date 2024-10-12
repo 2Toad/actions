@@ -67,6 +67,10 @@ inputs:
     description: "Whether to include development dependencies in the scan"
     required: false
     default: "true"
+  fail_on_db_error:
+    description: "When true the action will fail if Trivy cannot download the vulnerability DB"
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -93,8 +97,12 @@ runs:
         # Check the exit code and handle the specific error
         if [ $exit_code -ne 0 ]; then
           if echo "$trivy_output" | grep -q -i 'failed to download vulnerability DB'; then
-            echo "WARNING: Trivy failed to download vulnerability DB, so it was unable to scan for vulnerabilities."
-            exit 0
+            if [ "${{ inputs.fail_on_db_error }}" = "true" ]; then
+              exit 1
+            else
+              echo "WARNING: Trivy failed to download vulnerability DB. Unable to scan for vulnerabilities."
+              exit 0
+            fi
           else
             exit $exit_code
           fi
