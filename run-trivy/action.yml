@@ -16,6 +16,9 @@
 #   - skip_files (optional): A comma-separated list of files not to scan.
 #   - include_dev_dependencies (optional): A boolean value to determine whether
 #     development dependencies should be included in the scan. Default is "true".
+#   - cache_db (optional): When true, the Trivy vulnerability database is cached
+#     between workflow runs using GitHub Actions cache. If a database fetch fails,
+#     the workflow falls back to the cached database. Default is "true".
 #   - ignored_licenses (optional): A comma-separated list of licenses to ignore
 #     (e.g., "MPL-2.0,LGPL-2.1").
 #
@@ -34,7 +37,7 @@
 #
 #         - name: Install Trivy
 #           uses: 2Toad/actions/install-trivy@v1
-#   
+#
 #         - name: Run Trivy SCA Scan
 #           uses: 2Toad/actions/run-trivy@v1
 #           with:
@@ -73,6 +76,10 @@ inputs:
     description: "When true the action will fail if Trivy cannot download the vulnerability DB"
     required: false
     default: "true"
+  cache_db:
+    description: "When true, caches the Trivy vulnerability DB between runs and falls back to the cache if a fetch fails"
+    required: false
+    default: "true"
   ignored_licenses:
     description: "Comma-separated list of licenses to ignore (e.g., MPL-2.0,LGPL-2.1)"
     required: false
@@ -81,6 +88,15 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Restore Trivy DB cache
+      if: inputs.cache_db == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/trivy/db
+        key: trivy-db-${{ runner.os }}-${{ github.run_id }}
+        restore-keys: |
+          trivy-db-${{ runner.os }}-
+
     - name: Run Trivy SCA scan
       shell: bash
       run: |
@@ -104,7 +120,43 @@ runs:
         # Check the exit code and handle the specific error
         if [ $exit_code -ne 0 ]; then
           if echo "$trivy_output" | grep -q -i 'failed to download vulnerability DB'; then
-            if [ "${{ inputs.fail_on_db_error }}" = "true" ]; then
+            # Attempt fallback to cached DB if caching is enabled
+            if [ "${{ inputs.cache_db }}" = "true" ] && [ -d "$HOME/.cache/trivy/db" ] && [ -n "$(ls -A "$HOME/.cache/trivy/db" 2>/dev/null)" ]; then
+              echo ""
+              echo "WARNING: Trivy failed to download vulnerability DB. Falling back to cached database."
+              echo ""
+
+              set +e
+              trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
+                --severity ${{ inputs.severity }} \
+                $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs ${{ inputs.skip_dirs }}") \
+                $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files ${{ inputs.skip_files }}") \
+                $([ "${{ inputs.include_dev_dependencies }}" = "true" ] && echo "--include-dev-deps") \
+                $([ -n "${{ inputs.license_severity }}" ] && echo "--license-severity ${{ inputs.license_severity }}") \
+                $([ -n "${{ inputs.ignored_licenses }}" ] && echo "--ignored-licenses ${{ inputs.ignored_licenses }}") \
+                --ignore-unfixed \
+                --no-progress \
+                --skip-db-update \
+                ${{ inputs.path }} \
+                --exit-code 1 2>&1)
+              exit_code=$?
+              set -e
+
+              echo "$trivy_output"
+
+              if [ $exit_code -ne 0 ]; then
+                if echo "$trivy_output" | grep -q -i 'failed to download vulnerability DB'; then
+                  if [ "${{ inputs.fail_on_db_error }}" = "true" ]; then
+                    exit 1
+                  else
+                    echo "WARNING: Trivy failed to scan with cached DB. Unable to scan for vulnerabilities."
+                    exit 0
+                  fi
+                else
+                  exit $exit_code
+                fi
+              fi
+            elif [ "${{ inputs.fail_on_db_error }}" = "true" ]; then
               exit 1
             else
               echo "WARNING: Trivy failed to download vulnerability DB. Unable to scan for vulnerabilities."
