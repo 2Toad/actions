@@ -39,6 +39,7 @@ This [GitHub Action](./run-trivy/action.yml) runs a Trivy SCA scan on the specif
 - `skip_files` (optional): A comma-separated list of files not to scan.
 - `include_dev_dependencies` (optional): When `true` development dependencies are included in the scan. Default is "true".
 - `fail_on_db_error` (optional): When `true` the action will fail if Trivy cannot download the vulnerability DB (and perform the vulnerability scan). Default is "true".
+- `ignored_licenses` (optional): A comma-separated list of licenses to ignore (e.g., `MPL-2.0,LGPL-2.1`).
 
 **Requirements:**
 
@@ -66,6 +67,7 @@ jobs:
           skip_dirs: "dist"
           skip_files: "Dockerfile"
           include_dev_dependencies: "false"
+          ignored_licenses: "MPL-2.0"
 ```
 
 ## Contributing 🤝
