@@ -16,11 +16,6 @@
 #   - skip_files (optional): A comma-separated list of files not to scan.
 #   - include_dev_dependencies (optional): A boolean value to determine whether
 #     development dependencies should be included in the scan. Default is "true".
-#   - license_severity (optional): Severity levels for license findings
-#     (e.g., "HIGH,CRITICAL"). When set, overrides the severity input for
-#     license scanning only.
-#   - ignored_licenses (optional): A comma-separated list of licenses to ignore
-#     (e.g., "MPL-2.0,LGPL-2.1").
 #
 # Requirements
 #   - Trivy must be installed (e.g., 2Toad/actions/install-trivy)
@@ -76,14 +71,6 @@ inputs:
     description: "When true the action will fail if Trivy cannot download the vulnerability DB"
     required: false
     default: "true"
-  license_severity:
-    description: "Severity levels for license findings (e.g., HIGH,CRITICAL). When set, overrides the severity input for license scanning only."
-    required: false
-    default: ""
-  ignored_licenses:
-    description: "Comma-separated list of licenses to ignore (e.g., MPL-2.0,LGPL-2.1)"
-    required: false
-    default: ""
 
 runs:
   using: "composite"
@@ -97,8 +84,6 @@ runs:
           $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs ${{ inputs.skip_dirs }}") \
           $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files ${{ inputs.skip_files }}") \
           $([ "${{ inputs.include_dev_dependencies }}" = "true" ] && echo "--include-dev-deps") \
-          $([ -n "${{ inputs.license_severity }}" ] && echo "--license-severity ${{ inputs.license_severity }}") \
-          $([ -n "${{ inputs.ignored_licenses }}" ] && echo "--ignored-licenses ${{ inputs.ignored_licenses }}") \
           --ignore-unfixed \
           --no-progress \
           ${{ inputs.path }} \
