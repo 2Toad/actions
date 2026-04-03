@@ -104,8 +104,8 @@ runs:
         set +e
         trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
           --severity "$INPUT_SEVERITY" \
-          $([ -n "$INPUT_SKIP_DIRS" ] && echo "--skip-dirs $INPUT_SKIP_DIRS") \
-          $([ -n "$INPUT_SKIP_FILES" ] && echo "--skip-files $INPUT_SKIP_FILES") \
+          ${INPUT_SKIP_DIRS:+--skip-dirs "$INPUT_SKIP_DIRS"} \
+          ${INPUT_SKIP_FILES:+--skip-files "$INPUT_SKIP_FILES"} \
           $([ "$INPUT_INCLUDE_DEV_DEPS" = "true" ] && echo "--include-dev-deps") \
           "${license_flags[@]}" \
           --ignore-unfixed \
@@ -115,8 +115,11 @@ runs:
         exit_code=$?
         set -e
 
-        # Print the Trivy output to the console
+        # Print the Trivy output to the console (disable workflow commands to prevent log injection)
+        stop_token=$(uuidgen)
+        echo "::stop-commands::$stop_token"
         echo "$trivy_output"
+        echo "::$stop_token::"
 
         # Check the exit code and handle the specific error
         if [ $exit_code -ne 0 ]; then
