@@ -1,0 +1,132 @@
+name: Test Actions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-install-trivy:
+    name: "install-trivy: default version"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - run: trivy --version
+
+  test-install-trivy-custom-version:
+    name: "install-trivy: custom version"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+        with:
+          version: "0.69.2"
+      - name: Verify installed version
+        run: trivy --version | grep -q "0.69.2"
+
+  test-run-trivy-basic:
+    name: "run-trivy: basic scan"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+
+  test-run-trivy-severity:
+    name: "run-trivy: custom severity"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          severity: "HIGH,CRITICAL"
+
+  test-run-trivy-skip-dirs:
+    name: "run-trivy: skip_dirs"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          skip_dirs: ".github,install-trivy"
+
+  test-run-trivy-skip-files:
+    name: "run-trivy: skip_files"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          skip_files: "contribute.md"
+
+  test-run-trivy-no-dev-deps:
+    name: "run-trivy: exclude dev dependencies"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          include_dev_dependencies: "false"
+
+  test-run-trivy-ignored-licenses:
+    name: "run-trivy: simple ignored licenses"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          ignored_licenses: "MPL-2.0,LGPL-2.1"
+
+  test-run-trivy-licenses-with-spaces:
+    name: "run-trivy: license names with spaces"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          ignored_licenses: "Apache License 2.0,MIT License"
+
+  test-run-trivy-compound-licenses:
+    name: "run-trivy: compound license expressions"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          ignored_licenses: "Apache-2.0 AND LGPL-3.0-or-later AND MIT"
+
+  test-run-trivy-empty-ignored-licenses:
+    name: "run-trivy: empty ignored_licenses"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          ignored_licenses: ""
+
+  test-run-trivy-db-error-handling:
+    name: "run-trivy: fail_on_db_error=false"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          fail_on_db_error: "false"
+
+  test-run-trivy-custom-path:
+    name: "run-trivy: custom path"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          path: "./run-trivy"

@@ -20,7 +20,7 @@
 #     between workflow runs using GitHub Actions cache. If a database fetch fails,
 #     the workflow falls back to the cached database. Default is "true".
 #   - ignored_licenses (optional): A comma-separated list of licenses to ignore
-#     (e.g., "MPL-2.0,LGPL-2.1").
+#     (e.g., "MPL-2.0,LGPL-2.1"). Supports compound names (e.g., "Apache-2.0 AND LGPL-3.0-or-later").
 #
 # Requirements
 #   - Trivy must be installed (e.g., 2Toad/actions/install-trivy)
@@ -33,7 +33,7 @@
 #       runs-on: ubuntu-latest
 #       steps:
 #         - name: Checkout code
-#           uses: actions/checkout@v4
+#           uses: actions/checkout@v6
 #
 #         - name: Install Trivy
 #           uses: 2Toad/actions/install-trivy@v1
@@ -99,23 +99,43 @@ runs:
 
     - name: Run Trivy SCA scan
       shell: bash
+      env:
+        INPUT_SEVERITY: ${{ inputs.severity }}
+        INPUT_SKIP_DIRS: ${{ inputs.skip_dirs }}
+        INPUT_SKIP_FILES: ${{ inputs.skip_files }}
+        INPUT_INCLUDE_DEV_DEPS: ${{ inputs.include_dev_dependencies }}
+        INPUT_IGNORED_LICENSES: ${{ inputs.ignored_licenses }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FAIL_ON_DB_ERROR: ${{ inputs.fail_on_db_error }}
       run: |
+        # Build --ignored-licenses flags (one per entry to support compound names with spaces)
+        license_flags=()
+        if [ -n "$INPUT_IGNORED_LICENSES" ]; then
+          IFS=',' read -ra licenses <<< "$INPUT_IGNORED_LICENSES"
+          for license in "${licenses[@]}"; do
+            license_flags+=("--ignored-licenses" "$license")
+          done
+        fi
+
         set +e
         trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
-          --severity ${{ inputs.severity }} \
-          $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs ${{ inputs.skip_dirs }}") \
-          $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files ${{ inputs.skip_files }}") \
-          $([ "${{ inputs.include_dev_dependencies }}" = "true" ] && echo "--include-dev-deps") \
-          $([ -n "${{ inputs.ignored_licenses }}" ] && echo "--ignored-licenses ${{ inputs.ignored_licenses }}") \
+          --severity "$INPUT_SEVERITY" \
+          ${INPUT_SKIP_DIRS:+--skip-dirs "$INPUT_SKIP_DIRS"} \
+          ${INPUT_SKIP_FILES:+--skip-files "$INPUT_SKIP_FILES"} \
+          $([ "$INPUT_INCLUDE_DEV_DEPS" = "true" ] && echo "--include-dev-deps") \
+          "${license_flags[@]}" \
           --ignore-unfixed \
           --no-progress \
-          ${{ inputs.path }} \
+          "$INPUT_PATH" \
           --exit-code 1 2>&1)
         exit_code=$?
         set -e
 
-        # Print the Trivy output to the console
+        # Print the Trivy output to the console (disable workflow commands to prevent log injection)
+        stop_token=$(uuidgen)
+        echo "::stop-commands::$stop_token"
         echo "$trivy_output"
+        echo "::$stop_token::"
 
         # Check the exit code and handle the specific error
         if [ $exit_code -ne 0 ]; then
@@ -128,25 +148,27 @@ runs:
 
               set +e
               trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
-                --severity ${{ inputs.severity }} \
-                $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs ${{ inputs.skip_dirs }}") \
-                $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files ${{ inputs.skip_files }}") \
-                $([ "${{ inputs.include_dev_dependencies }}" = "true" ] && echo "--include-dev-deps") \
-                $([ -n "${{ inputs.license_severity }}" ] && echo "--license-severity ${{ inputs.license_severity }}") \
-                $([ -n "${{ inputs.ignored_licenses }}" ] && echo "--ignored-licenses ${{ inputs.ignored_licenses }}") \
+                --severity "$INPUT_SEVERITY" \
+                ${INPUT_SKIP_DIRS:+--skip-dirs "$INPUT_SKIP_DIRS"} \
+                ${INPUT_SKIP_FILES:+--skip-files "$INPUT_SKIP_FILES"} \
+                $([ "$INPUT_INCLUDE_DEV_DEPS" = "true" ] && echo "--include-dev-deps") \
+                "${license_flags[@]}" \
                 --ignore-unfixed \
                 --no-progress \
                 --skip-db-update \
-                ${{ inputs.path }} \
+                "$INPUT_PATH" \
                 --exit-code 1 2>&1)
               exit_code=$?
               set -e
 
+              stop_token=$(uuidgen)
+              echo "::stop-commands::$stop_token"
               echo "$trivy_output"
+              echo "::$stop_token::"
 
               if [ $exit_code -ne 0 ]; then
                 if echo "$trivy_output" | grep -q -i 'failed to download vulnerability DB'; then
-                  if [ "${{ inputs.fail_on_db_error }}" = "true" ]; then
+                  if [ "$INPUT_FAIL_ON_DB_ERROR" = "true" ]; then
                     exit 1
                   else
                     echo "WARNING: Trivy failed to scan with cached DB. Unable to scan for vulnerabilities."
@@ -156,7 +178,7 @@ runs:
                   exit $exit_code
                 fi
               fi
-            elif [ "${{ inputs.fail_on_db_error }}" = "true" ]; then
+            elif [ "$INPUT_FAIL_ON_DB_ERROR" = "true" ]; then
               exit 1
             else
               echo "WARNING: Trivy failed to download vulnerability DB. Unable to scan for vulnerabilities."

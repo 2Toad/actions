@@ -13,11 +13,13 @@
 #       runs-on: ubuntu-latest
 #       steps:
 #         - name: Checkout code
-#           uses: actions/checkout@v4
+#           uses: actions/checkout@v6
 #
 #         - name: Install Trivy
 #           uses: 2Toad/actions/install-trivy@v1
-#   
+#           with:
+#             version: "0.69.3"  # optional, defaults to 0.69.3
+#
 #         - name: Run Trivy SCA Scan
 #           uses: 2Toad/actions/run-trivy@v1
 #           with:
@@ -28,15 +30,32 @@
 
 name: "Install Trivy"
 description: "Install Trivy SCA tool"
+inputs:
+  version:
+    description: "The version of Trivy to install (e.g., 0.69.3)"
+    required: false
+    default: "0.69.3"
 runs:
   using: "composite"
   steps:
     - name: Install Trivy
       shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
       run: |
-        sudo apt-get update
-        sudo apt-get install wget apt-transport-https gnupg lsb-release -y
-        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-        sudo apt-get update
-        sudo apt-get install trivy -y
+        deb_url="https://github.com/aquasecurity/trivy/releases/download/v${INPUT_VERSION}/trivy_${INPUT_VERSION}_Linux-64bit.deb"
+        checksums_url="https://github.com/aquasecurity/trivy/releases/download/v${INPUT_VERSION}/trivy_${INPUT_VERSION}_checksums.txt"
+
+        wget -q "$deb_url" -O trivy.deb
+        wget -q "$checksums_url" -O checksums.txt
+
+        # Verify checksum
+        expected=$(grep "trivy_${INPUT_VERSION}_Linux-64bit.deb" checksums.txt | awk '{print $1}')
+        actual=$(sha256sum trivy.deb | awk '{print $1}')
+        if [ "$expected" != "$actual" ]; then
+          echo "Checksum mismatch: expected $expected, got $actual"
+          exit 1
+        fi
+
+        sudo dpkg -i trivy.deb
+        rm trivy.deb checksums.txt
