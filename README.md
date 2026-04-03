@@ -39,7 +39,18 @@ This [GitHub Action](./run-trivy/action.yml) runs a Trivy SCA scan on the specif
 - `skip_files` (optional): A comma-separated list of files not to scan.
 - `include_dev_dependencies` (optional): When `true` development dependencies are included in the scan. Default is "true".
 - `fail_on_db_error` (optional): When `true` the action will fail if Trivy cannot download the vulnerability DB (and perform the vulnerability scan). Default is "true".
+- `cache_db` (optional): When `true`, the Trivy vulnerability database is cached between workflow runs using GitHub Actions cache. If a database fetch fails due to rate limits or connectivity issues, the workflow automatically falls back to the cached database, preventing workflow failures. Default is "true".
 - `ignored_licenses` (optional): A comma-separated list of licenses to ignore (e.g., `MPL-2.0,LGPL-2.1`).
+
+**Caching and Fallback:**
+
+When `cache_db` is enabled (the default), the action uses [GitHub Actions cache](https://github.com/actions/cache) to store the Trivy cache directory (`~/.cache/trivy`), which includes the vulnerability DB and Java DB. This provides:
+
+1. **Automatic caching** — After a successful database download, the DB is cached and available for future workflow runs.
+2. **Fallback on failure** — If Trivy fails to download the vulnerability DB (e.g., due to rate limits or network issues), the action automatically retries the scan using the cached database with `--skip-db-update`. This prevents workflow disruptions while still performing the security scan.
+3. **Graceful degradation** — If no cached database exists and the download fails, behavior is controlled by `fail_on_db_error`: the action either fails (default) or continues with a warning.
+
+> **Note:** The cached database may not contain the very latest vulnerability data. The action always attempts a fresh download first, only falling back to the cache when the download fails.
 
 **Requirements:**
 
