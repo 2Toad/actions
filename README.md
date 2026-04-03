@@ -44,7 +44,7 @@ This [GitHub Action](./run-trivy/action.yml) runs a Trivy SCA scan on the specif
 
 **Caching and Fallback:**
 
-When `cache_db` is enabled (the default), the action uses [GitHub Actions cache](https://github.com/actions/cache) to store the Trivy vulnerability database (`~/.cache/trivy/db`). This provides:
+When `cache_db` is enabled (the default), the action uses [GitHub Actions cache](https://github.com/actions/cache) to store the Trivy cache directory (`~/.cache/trivy`), which includes the vulnerability DB and Java DB. This provides:
 
 1. **Automatic caching** — After a successful database download, the DB is cached and available for future workflow runs.
 2. **Fallback on failure** — If Trivy fails to download the vulnerability DB (e.g., due to rate limits or network issues), the action automatically retries the scan using the cached database with `--skip-db-update`. This prevents workflow disruptions while still performing the security scan.

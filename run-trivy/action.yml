@@ -92,10 +92,10 @@ runs:
       if: inputs.cache_db == 'true'
       uses: actions/cache@v4
       with:
-        path: ~/.cache/trivy/db
-        key: trivy-db-${{ runner.os }}-${{ github.run_id }}
+        path: ~/.cache/trivy
+        key: trivy-cache-${{ runner.os }}-${{ github.run_id }}
         restore-keys: |
-          trivy-db-${{ runner.os }}-
+          trivy-cache-${{ runner.os }}-
 
     - name: Run Trivy SCA scan
       shell: bash
@@ -107,6 +107,7 @@ runs:
         INPUT_IGNORED_LICENSES: ${{ inputs.ignored_licenses }}
         INPUT_PATH: ${{ inputs.path }}
         INPUT_FAIL_ON_DB_ERROR: ${{ inputs.fail_on_db_error }}
+        INPUT_CACHE_DB: ${{ inputs.cache_db }}
       run: |
         # Build --ignored-licenses flags (one per entry to support compound names with spaces)
         license_flags=()
@@ -117,54 +118,53 @@ runs:
           done
         fi
 
-        set +e
-        trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
-          --severity "$INPUT_SEVERITY" \
-          ${INPUT_SKIP_DIRS:+--skip-dirs "$INPUT_SKIP_DIRS"} \
-          ${INPUT_SKIP_FILES:+--skip-files "$INPUT_SKIP_FILES"} \
-          $([ "$INPUT_INCLUDE_DEV_DEPS" = "true" ] && echo "--include-dev-deps") \
-          "${license_flags[@]}" \
-          --ignore-unfixed \
-          --no-progress \
-          "$INPUT_PATH" \
-          --exit-code 1 2>&1)
-        exit_code=$?
-        set -e
+        # Run Trivy scan with optional extra flags; captures output and exit code
+        run_trivy_scan() {
+          local extra_flags=("$@")
+          set +e
+          trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
+            --severity "$INPUT_SEVERITY" \
+            ${INPUT_SKIP_DIRS:+--skip-dirs "$INPUT_SKIP_DIRS"} \
+            ${INPUT_SKIP_FILES:+--skip-files "$INPUT_SKIP_FILES"} \
+            $([ "$INPUT_INCLUDE_DEV_DEPS" = "true" ] && echo "--include-dev-deps") \
+            "${license_flags[@]}" \
+            --ignore-unfixed \
+            --no-progress \
+            "${extra_flags[@]}" \
+            "$INPUT_PATH" \
+            --exit-code 1 2>&1)
+          exit_code=$?
+          set -e
 
-        # Print the Trivy output to the console (disable workflow commands to prevent log injection)
-        stop_token=$(uuidgen)
-        echo "::stop-commands::$stop_token"
-        echo "$trivy_output"
-        echo "::$stop_token::"
+          # Print the Trivy output to the console (disable workflow commands to prevent log injection)
+          stop_token=$(uuidgen)
+          echo "::stop-commands::$stop_token"
+          echo "$trivy_output"
+          echo "::$stop_token::"
+        }
+
+        # Primary scan (downloads fresh DB)
+        run_trivy_scan
 
         # Check the exit code and handle the specific error
         if [ $exit_code -ne 0 ]; then
           if echo "$trivy_output" | grep -q -i 'failed to download vulnerability DB'; then
             # Attempt fallback to cached DB if caching is enabled
-            if [ "${{ inputs.cache_db }}" = "true" ] && [ -d "$HOME/.cache/trivy/db" ] && [ -n "$(ls -A "$HOME/.cache/trivy/db" 2>/dev/null)" ]; then
+            if [ "$INPUT_CACHE_DB" = "true" ] && [ -d "$HOME/.cache/trivy/db" ] && [ -n "$(ls -A "$HOME/.cache/trivy/db" 2>/dev/null)" ]; then
+              db_date=$(stat -c '%Y' "$HOME/.cache/trivy/db/metadata.json" 2>/dev/null || stat -f '%m' "$HOME/.cache/trivy/db/metadata.json" 2>/dev/null)
+              if [ -n "$db_date" ]; then
+                db_date_fmt=$(date -d "@$db_date" '+%-m/%-d/%Y' 2>/dev/null || date -r "$db_date" '+%-m/%-d/%Y' 2>/dev/null)
+              fi
+
               echo ""
-              echo "WARNING: Trivy failed to download vulnerability DB. Falling back to cached database."
+              if [ -n "$db_date_fmt" ]; then
+                echo "WARNING: Trivy failed to download vulnerability DB. Falling back to cached database from ${db_date_fmt}."
+              else
+                echo "WARNING: Trivy failed to download vulnerability DB. Falling back to cached database."
+              fi
               echo ""
 
-              set +e
-              trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
-                --severity "$INPUT_SEVERITY" \
-                ${INPUT_SKIP_DIRS:+--skip-dirs "$INPUT_SKIP_DIRS"} \
-                ${INPUT_SKIP_FILES:+--skip-files "$INPUT_SKIP_FILES"} \
-                $([ "$INPUT_INCLUDE_DEV_DEPS" = "true" ] && echo "--include-dev-deps") \
-                "${license_flags[@]}" \
-                --ignore-unfixed \
-                --no-progress \
-                --skip-db-update \
-                "$INPUT_PATH" \
-                --exit-code 1 2>&1)
-              exit_code=$?
-              set -e
-
-              stop_token=$(uuidgen)
-              echo "::stop-commands::$stop_token"
-              echo "$trivy_output"
-              echo "::$stop_token::"
+              run_trivy_scan --skip-db-update
 
               if [ $exit_code -ne 0 ]; then
                 if echo "$trivy_output" | grep -q -i 'failed to download vulnerability DB'; then
