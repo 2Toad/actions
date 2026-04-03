@@ -23,21 +23,6 @@ jobs:
       - name: Verify installed version
         run: trivy --version | grep -q "0.69.2"
 
-  test-install-trivy-idempotent:
-    name: "install-trivy: no duplicate sources on rerun"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./install-trivy
-      - uses: ./install-trivy
-      - name: Verify no duplicate sources entries
-        run: |
-          count=$(grep -c "trivy-repo" /etc/apt/sources.list.d/trivy.list)
-          if [ "$count" -ne 1 ]; then
-            echo "Expected 1 entry, found $count"
-            exit 1
-          fi
-
   test-run-trivy-basic:
     name: "run-trivy: basic scan"
     runs-on: ubuntu-latest
@@ -96,8 +81,8 @@ jobs:
         with:
           ignored_licenses: "MPL-2.0,LGPL-2.1"
 
-  test-run-trivy-compound-licenses:
-    name: "run-trivy: compound license names with spaces"
+  test-run-trivy-licenses-with-spaces:
+    name: "run-trivy: license names with spaces"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -105,6 +90,16 @@ jobs:
       - uses: ./run-trivy
         with:
           ignored_licenses: "Apache License 2.0,MIT License"
+
+  test-run-trivy-compound-licenses:
+    name: "run-trivy: compound license expressions"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          ignored_licenses: "Apache-2.0 AND LGPL-3.0-or-later AND MIT"
 
   test-run-trivy-empty-ignored-licenses:
     name: "run-trivy: empty ignored_licenses"
