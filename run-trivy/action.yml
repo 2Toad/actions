@@ -83,26 +83,34 @@ runs:
   steps:
     - name: Run Trivy SCA scan
       shell: bash
+      env:
+        INPUT_SEVERITY: ${{ inputs.severity }}
+        INPUT_SKIP_DIRS: ${{ inputs.skip_dirs }}
+        INPUT_SKIP_FILES: ${{ inputs.skip_files }}
+        INPUT_INCLUDE_DEV_DEPS: ${{ inputs.include_dev_dependencies }}
+        INPUT_IGNORED_LICENSES: ${{ inputs.ignored_licenses }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FAIL_ON_DB_ERROR: ${{ inputs.fail_on_db_error }}
       run: |
         # Build --ignored-licenses flags (one per entry to support compound names with spaces)
-        license_flags=""
-        if [ -n "${{ inputs.ignored_licenses }}" ]; then
-          IFS=',' read -ra licenses <<< "${{ inputs.ignored_licenses }}"
+        license_flags=()
+        if [ -n "$INPUT_IGNORED_LICENSES" ]; then
+          IFS=',' read -ra licenses <<< "$INPUT_IGNORED_LICENSES"
           for license in "${licenses[@]}"; do
-            license_flags+=" --ignored-licenses \"$license\""
+            license_flags+=("--ignored-licenses" "$license")
           done
         fi
 
         set +e
-        trivy_output=$(eval trivy fs --scanners vuln,misconfig,secret,license \
-          --severity ${{ inputs.severity }} \
-          $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs ${{ inputs.skip_dirs }}") \
-          $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files ${{ inputs.skip_files }}") \
-          $([ "${{ inputs.include_dev_dependencies }}" = "true" ] && echo "--include-dev-deps") \
-          $license_flags \
+        trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
+          --severity "$INPUT_SEVERITY" \
+          $([ -n "$INPUT_SKIP_DIRS" ] && echo "--skip-dirs $INPUT_SKIP_DIRS") \
+          $([ -n "$INPUT_SKIP_FILES" ] && echo "--skip-files $INPUT_SKIP_FILES") \
+          $([ "$INPUT_INCLUDE_DEV_DEPS" = "true" ] && echo "--include-dev-deps") \
+          "${license_flags[@]}" \
           --ignore-unfixed \
           --no-progress \
-          ${{ inputs.path }} \
+          "$INPUT_PATH" \
           --exit-code 1 2>&1)
         exit_code=$?
         set -e
@@ -113,7 +121,7 @@ runs:
         # Check the exit code and handle the specific error
         if [ $exit_code -ne 0 ]; then
           if echo "$trivy_output" | grep -q -i 'failed to download vulnerability DB'; then
-            if [ "${{ inputs.fail_on_db_error }}" = "true" ]; then
+            if [ "$INPUT_FAIL_ON_DB_ERROR" = "true" ]; then
               exit 1
             else
               echo "WARNING: Trivy failed to download vulnerability DB. Unable to scan for vulnerabilities."
