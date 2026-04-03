@@ -121,6 +121,26 @@ jobs:
         with:
           fail_on_db_error: "false"
 
+  test-run-trivy-cache-db:
+    name: "run-trivy: cache_db enabled"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          cache_db: "true"
+
+  test-run-trivy-cache-db-disabled:
+    name: "run-trivy: cache_db disabled"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./install-trivy
+      - uses: ./run-trivy
+        with:
+          cache_db: "false"
+
   test-run-trivy-custom-path:
     name: "run-trivy: custom path"
     runs-on: ubuntu-latest
