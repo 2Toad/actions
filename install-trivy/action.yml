@@ -40,10 +40,22 @@ runs:
   steps:
     - name: Install Trivy
       shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
       run: |
-        sudo apt-get update
-        sudo apt-get install wget apt-transport-https gnupg lsb-release -y
-        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-        sudo apt-get update
-        sudo apt-get install trivy=${{ inputs.version }} -y
+        deb_url="https://github.com/aquasecurity/trivy/releases/download/v${INPUT_VERSION}/trivy_${INPUT_VERSION}_Linux-64bit.deb"
+        checksums_url="https://github.com/aquasecurity/trivy/releases/download/v${INPUT_VERSION}/trivy_${INPUT_VERSION}_checksums.txt"
+
+        wget -q "$deb_url" -O trivy.deb
+        wget -q "$checksums_url" -O checksums.txt
+
+        # Verify checksum
+        expected=$(grep "trivy_${INPUT_VERSION}_Linux-64bit.deb" checksums.txt | awk '{print $1}')
+        actual=$(sha256sum trivy.deb | awk '{print $1}')
+        if [ "$expected" != "$actual" ]; then
+          echo "Checksum mismatch: expected $expected, got $actual"
+          exit 1
+        fi
+
+        sudo dpkg -i trivy.deb
+        rm trivy.deb checksums.txt
