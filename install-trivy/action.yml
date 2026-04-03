@@ -16,12 +16,12 @@
 #           uses: actions/checkout@v6
 #
 #         - name: Install Trivy
-#           uses: 2Toad/actions/install-trivy@v1
+#           uses: 2Toad/actions/install-trivy@v2
 #           with:
 #             version: "0.69.3"  # optional, defaults to 0.69.3
 #
 #         - name: Run Trivy SCA Scan
-#           uses: 2Toad/actions/run-trivy@v1
+#           uses: 2Toad/actions/run-trivy@v2
 #           with:
 #             path: "./src"
 #             severity: "MEDIUM,HIGH,CRITICAL"

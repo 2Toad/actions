@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install Trivy
-        uses: 2Toad/actions/install-trivy@v1
+        uses: 2Toad/actions/install-trivy@v2
 ```
 
 ### run-trivy
@@ -69,10 +69,10 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install Trivy
-        uses: 2Toad/actions/install-trivy@v1
+        uses: 2Toad/actions/install-trivy@v2
 
       - name: Run Trivy SCA Scan
-        uses: 2Toad/actions/run-trivy@v1
+        uses: 2Toad/actions/run-trivy@v2
         with:
           severity: "HIGH,CRITICAL"
           skip_dirs: "dist"
