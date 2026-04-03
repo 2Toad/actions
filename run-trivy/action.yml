@@ -17,7 +17,7 @@
 #   - include_dev_dependencies (optional): A boolean value to determine whether
 #     development dependencies should be included in the scan. Default is "true".
 #   - ignored_licenses (optional): A comma-separated list of licenses to ignore
-#     (e.g., "MPL-2.0,LGPL-2.1").
+#     (e.g., "MPL-2.0,LGPL-2.1"). Supports compound names (e.g., "Apache-2.0 AND LGPL-3.0-or-later").
 #
 # Requirements
 #   - Trivy must be installed (e.g., 2Toad/actions/install-trivy)
