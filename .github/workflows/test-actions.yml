@@ -8,7 +8,7 @@ jobs:
     name: "install-trivy: default version"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - run: trivy --version
 
@@ -16,7 +16,7 @@ jobs:
     name: "install-trivy: custom version"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
         with:
           version: "0.69.2"
@@ -27,7 +27,7 @@ jobs:
     name: "install-trivy: no duplicate sources on rerun"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./install-trivy
       - name: Verify no duplicate sources entries
@@ -42,7 +42,7 @@ jobs:
     name: "run-trivy: basic scan"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
 
@@ -50,7 +50,7 @@ jobs:
     name: "run-trivy: custom severity"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
         with:
@@ -60,7 +60,7 @@ jobs:
     name: "run-trivy: skip_dirs"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
         with:
@@ -70,7 +70,7 @@ jobs:
     name: "run-trivy: skip_files"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
         with:
@@ -80,7 +80,7 @@ jobs:
     name: "run-trivy: exclude dev dependencies"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
         with:
@@ -90,7 +90,7 @@ jobs:
     name: "run-trivy: simple ignored licenses"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
         with:
@@ -100,7 +100,7 @@ jobs:
     name: "run-trivy: compound license names with spaces"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
         with:
@@ -110,7 +110,7 @@ jobs:
     name: "run-trivy: empty ignored_licenses"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
         with:
@@ -120,7 +120,7 @@ jobs:
     name: "run-trivy: fail_on_db_error=false"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
         with:
@@ -130,7 +130,7 @@ jobs:
     name: "run-trivy: custom path"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./install-trivy
       - uses: ./run-trivy
         with:
