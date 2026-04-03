@@ -84,13 +84,22 @@ runs:
     - name: Run Trivy SCA scan
       shell: bash
       run: |
+        # Build --ignored-licenses flags (one per entry to support compound names with spaces)
+        license_flags=""
+        if [ -n "${{ inputs.ignored_licenses }}" ]; then
+          IFS=',' read -ra licenses <<< "${{ inputs.ignored_licenses }}"
+          for license in "${licenses[@]}"; do
+            license_flags+=" --ignored-licenses \"$license\""
+          done
+        fi
+
         set +e
-        trivy_output=$(trivy fs --scanners vuln,misconfig,secret,license \
+        trivy_output=$(eval trivy fs --scanners vuln,misconfig,secret,license \
           --severity ${{ inputs.severity }} \
           $([ -n "${{ inputs.skip_dirs }}" ] && echo "--skip-dirs ${{ inputs.skip_dirs }}") \
           $([ -n "${{ inputs.skip_files }}" ] && echo "--skip-files ${{ inputs.skip_files }}") \
           $([ "${{ inputs.include_dev_dependencies }}" = "true" ] && echo "--include-dev-deps") \
-          $([ -n "${{ inputs.ignored_licenses }}" ] && echo "--ignored-licenses ${{ inputs.ignored_licenses }}") \
+          $license_flags \
           --ignore-unfixed \
           --no-progress \
           ${{ inputs.path }} \
