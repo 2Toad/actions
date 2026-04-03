@@ -13,10 +13,21 @@ Thank you for wanting to contribute to this project. With your help we can ensur
    1. Make sure your PR is targeting the correct branch (see Step 2.i)
    2. At the top of your PR description write: "Fixes #_n_". Where _n_ is the number of the Issue your PR is fixing (e.g., `Fixes #33`). This will tell GitHub to associate your PR with the Issue.
 
-## Deployment
+## Testing
 
 1. Navigate to the [Actions tab](https://github.com/2Toad/actions/actions)
-2. Select the "Deploy to Prod" workflow
+2. Select the "Test Actions" workflow
+3. Click "Run workflow"
+4. Select the branch containing the changes you want to test
+5. Click "Run workflow" to start the tests
+
+This will run all test scenarios for both the `install-trivy` and `run-trivy` actions in parallel. Each test job is independent, so you can quickly identify which scenarios pass or fail.
+
+## Deployment
+
+1. Run the "Test Actions" workflow (see [Testing](#testing)) and ensure all tests pass before deploying
+2. Navigate to the [Actions tab](https://github.com/2Toad/actions/actions)
+3. Select the "Deploy to Prod" workflow
 3. Click "Run workflow".
 4. Enter a version number using semantic versioning (e.g., `1.1.0`).
 5. Click "Run workflow" to start the process.
